@@ -1,0 +1,61 @@
+#!/bin/sh
+#
+# BlackArch Linux Controller Script
+#
+# Checks environment and does necessary setups.
+
+
+SUCCESS=0
+FAILURE=1
+
+VERBOSE='/dev/null'
+
+setup_qemu()
+{
+  return $SUCCESS
+}
+
+setup_vmware()
+{
+  pacman -Syy --needed open-vm-tools > $VERBOSE 2>&1
+  
+  return $SUCCESS
+}
+
+setup_vbox()
+{
+  pacman -Syy --needed virtualbox-guest-utils virtualbox-guest-modules-arch > \
+    $VERBOSE 2>&1
+  
+  systemctl enable vboxservice > $VERBOSE 2>&1
+  systemctl start vboxservice > $VERBOSE 2>&1
+
+  return $SUCCESS
+}
+
+check_env()
+{
+  env=$(dmesg |egrep -io 'virtualbox|vmware|qemu' | sort -u)
+
+  if [ "$env" = "VirtualBox" ]
+  then
+    setup_vbox
+  elif [ "$env" = "VMware" ]
+  then
+    setup_vmware
+  elif [ "$env" = "QEMU" ]
+  then
+    setup_qemu
+  fi
+
+  return $SUCCESS
+}
+
+main()
+{
+  check_env
+
+  return $SUCCESS
+}
+
+main
