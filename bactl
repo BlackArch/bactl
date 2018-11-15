@@ -19,6 +19,11 @@ setup_vmware()
 {
   pacman -Syy --needed open-vm-tools > $VERBOSE 2>&1
 
+  systemctl enable vmware-vmblock-fuse > $VERBOSE 2>&1
+  systemctl enable vmtoolsd > $VERBOSE 2>&1
+  systemctl start vmware-vmblock-fuse > $VERBOSE 2>&1
+  systemctl start vmtoolsd > $VERBOSE 2>&1
+
   return $SUCCESS
 }
 
