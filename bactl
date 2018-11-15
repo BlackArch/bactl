@@ -18,7 +18,7 @@ setup_qemu()
 setup_vmware()
 {
   pacman -Syy --needed open-vm-tools > $VERBOSE 2>&1
-  
+
   return $SUCCESS
 }
 
@@ -26,7 +26,7 @@ setup_vbox()
 {
   pacman -Syy --needed virtualbox-guest-utils virtualbox-guest-modules-arch > \
     $VERBOSE 2>&1
-  
+
   systemctl enable vboxservice > $VERBOSE 2>&1
   systemctl start vboxservice > $VERBOSE 2>&1
 
