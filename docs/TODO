@@ -1,0 +1,13 @@
+ChangeLog and TODO list for blackarch-installer
+===============================================
+
+
+[ ] task to be performed
+[.] ongoing task
+[x] finished task
+
+
+  [ ] install and configure any other tools which need after-install setups
+  [ ] install and configure postgresql (for metasploit)
+  [x] add environment support for: vbox, vmware and qemu
+  [x] initial release
