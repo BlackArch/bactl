@@ -10,11 +10,13 @@ FAILURE=1
 
 VERBOSE='/dev/null'
 
+# setup qemu-kvm related things
 setup_qemu()
 {
   return $SUCCESS
 }
 
+# setup VMware related things
 setup_vmware()
 {
   pacman -Syy --needed open-vm-tools > $VERBOSE 2>&1
@@ -27,6 +29,7 @@ setup_vmware()
   return $SUCCESS
 }
 
+# setup VirtualBox related things
 setup_vbox()
 {
   pacman -Syy --needed virtualbox-guest-utils virtualbox-guest-modules-arch > \
@@ -38,7 +41,8 @@ setup_vbox()
   return $SUCCESS
 }
 
-check_env()
+# are we in a VM? if so, make necessary setups
+check_vm_env()
 {
   env=$(dmesg |egrep -io 'virtualbox|vmware|qemu' | sort -u)
 
@@ -56,11 +60,13 @@ check_env()
   return $SUCCESS
 }
 
+# controller
 main()
 {
-  check_env
+  check_vm_env
 
   return $SUCCESS
 }
 
+# we start here
 main
