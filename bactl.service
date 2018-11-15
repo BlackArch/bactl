@@ -6,7 +6,6 @@ Type=oneshot
 ExecStart=/usr/bin/bactl
 TimeoutSec=0
 RemainAfterExit=yes
-SysVStartPriority=99
 
 [Install]
 WantedBy=multi-user.target
