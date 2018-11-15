@@ -6,11 +6,6 @@ Script to control BlackArch Linux related environments and setups.
 
 `pacman -S bactl`
 
-```
-systemctl enable bactl.service
-systemctl start bactl.service
-```
-
 ## Get Involved
 
 You can get in touch with the BlackArch Linux team. Just check out the following:
