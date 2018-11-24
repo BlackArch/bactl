@@ -60,10 +60,52 @@ check_vm_env()
   return $SUCCESS
 }
 
+setup_msf_env()
+{
+  pacman -Syy --needed metasploit postgresql postgresql-libs > \
+    $VERBOSE 2>&1
+
+  MSFPASS="msf"
+  MSFUSER="msf"
+  MSFDB="msf"
+  MSFCONFIG="/opt/metasploit/config/database.yml"
+  POSTGRESDIR="/var/lib/postgres"
+
+  sudo -u postgres sh -c "initdb --locale en_US.UTF-8 -D '$POSTGRESDIR/data'" > \
+    $VERBOSE 2>&1
+
+  systemctl start postgresql > $VERBOSE 2>&1
+
+  systemctl enable postgresql > $VERBOSE 2>&1
+
+  sudo -u postgres psql postgres -c "create role $MSFUSER login password '$MSFPASS'" > \
+    $VERBOSE 2>&1
+
+  sudo -u postgres psql postgres -c "CREATE DATABASE $MSFDB OWNER $MSFUSER;" > \
+    $VERBOSE 2>&1
+
+  cat > $MSFCONFIG << EOF
+production:
+  adapter: postgresql
+  database: $MSFDB
+  username: $MSFUSER
+  password: $MSFPASS
+  host: 127.0.0.1
+  port: 5432
+  pool: 5
+  timeout: 5
+EOF
+
+  echo "export MSF_DATABASE_CONFIG=$MSFCONFIG" >> /etc/profile.d/metasploit.sh
+  source /etc/profile
+  return $SUCCESS
+}
+
 # controller
 main()
 {
   check_vm_env
+  setup_msf_env
 
   return $SUCCESS
 }
