@@ -60,44 +60,100 @@ check_vm_env()
   return $SUCCESS
 }
 
+pg_cmd() {
+  su - postgres -c "$*"
+}
+
+db_exists() {
+  if pg_cmd "psql -lqt" | cut -d \| -f 1 | grep -qw $1; then
+    return 0
+  fi
+  return 1
+}
+
+user_exists() {
+  if echo "SELECT usename FROM pg_user;" | pg_cmd "psql -qt postgres" | grep -qw $1; then
+    return 0
+  fi
+  return 1
+}
+
+# setup Metasploit related things
 setup_msf_env()
 {
-  pacman -Syy --needed metasploit postgresql postgresql-libs > \
-    $VERBOSE 2>&1
+  pacman -Syy --needed metasploit postgresql postgresql-libs > $VERBOSE 2>&1
 
-  MSFPASS="msf"
-  MSFUSER="msf"
-  MSFDB="msf"
-  MSFCONFIG="/opt/metasploit/config/database.yml"
-  POSTGRESDIR="/var/lib/postgres"
+  METASPLOIT_BASEDIR=/opt/metasploit
+  PG_BASEDIR=/var/lib/postgres
 
-  sudo -u postgres sh -c "initdb --locale en_US.UTF-8 -D '$POSTGRESDIR/data'" > \
-    $VERBOSE 2>&1
+  DB_CONF=${METASPLOIT_BASEDIR}/config/database.yml
+  DB_NAME=msf
+  DB_USER=msf
+  DB_PASS=$(openssl rand -base64 32)
+  DB_PORT=5432
+  PG_CONF=${PG_BASEDIR}/data/postgresql.conf
+
+  if [ -e ${PG_CONF} ]; then
+    return
+  else
+    pg_cmd "initdb --locale en_US.UTF-8 -D '$PG_BASEDIR/data'" > $VERBOSE 2>&1
+  fi
 
   systemctl start postgresql > $VERBOSE 2>&1
 
   systemctl enable postgresql > $VERBOSE 2>&1
 
-  sudo -u postgres psql postgres -c "create role $MSFUSER login password '$MSFPASS'" > \
-    $VERBOSE 2>&1
+  if user_exists ${DB_USER}; then
+    printf "ALTER ROLE ${DB_USER} WITH PASSWORD '$DB_PASS';\n" | pg_cmd psql postgres > $VERBOSE 2>&1
+  else
+    TMPFILE=$(mktemp) || (echo -e "${RED}[-]${RESET} Error: Couldn't create temp file" && exit 1)
+    printf "%s\n%s\n" "${DB_PASS}" "${DB_PASS}" | pg_cmd createuser -S -D -R -P ${DB_USER} > $VERBOSE 2>&1 > "${TMPFILE}"
+    grep -v "^Enter password for new role: $\|^Enter it again: $" "${TMPFILE}"
+    rm -f "${TMPFILE}"
+  fi
 
-  sudo -u postgres psql postgres -c "CREATE DATABASE $MSFDB OWNER $MSFUSER;" > \
-    $VERBOSE 2>&1
+  if ! db_exists ${DB_NAME}; then
+    pg_cmd createdb ${DB_NAME} -O ${DB_USER} -T template0 -E UTF-8
+  fi
 
-  cat > $MSFCONFIG << EOF
+  if ! db_exists ${DB_NAME}_test; then
+    pg_cmd createdb ${DB_NAME}_test -O ${DB_USER} -T template0 -E UTF-8
+  fi
+
+  cat > ${DB_CONF} <<-EOF
+development:
+  adapter: postgresql
+  database: ${DB_NAME}
+  username: ${DB_USER}
+  password: ${DB_PASS}
+  host: localhost
+  port: $DB_PORT
+  pool: 5
+  timeout: 5
+
 production:
   adapter: postgresql
-  database: $MSFDB
-  username: $MSFUSER
-  password: $MSFPASS
-  host: 127.0.0.1
-  port: 5432
+  database: ${DB_NAME}
+  username: ${DB_USER}
+  password: ${DB_PASS}
+  host: localhost
+  port: $DB_PORT
+  pool: 5
+  timeout: 5
+
+test:
+  adapter: postgresql
+  database: ${DB_NAME}_test
+  username: ${DB_USER}
+  password: ${DB_PASS}
+  host: localhost
+  port: $DB_PORT
   pool: 5
   timeout: 5
 EOF
 
-  echo "export MSF_DATABASE_CONFIG=$MSFCONFIG" >> /etc/profile.d/metasploit.sh
-  source /etc/profile
+  echo "export MSF_DATABASE_CONFIG=$DB_CONF" > /etc/profile.d/metasploit.sh
+
   return $SUCCESS
 }
 
