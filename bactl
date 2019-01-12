@@ -2,13 +2,29 @@
 #
 # BlackArch Linux Controller Script
 #
-# Checks environment and does necessary setups.
+# Checks environment and does necessary setups, optimizations and clean-ups.
 
 
 SUCCESS=0
 FAILURE=1
 
 VERBOSE='/dev/null'
+
+
+# clean up environment, pacman and do some optimizations
+clean_up()
+{
+  # sys/pacman clean
+  pacman -Rscn $(pacman -Qtdq)
+  updatedb
+  pkgfile -u
+  pacman -Fyy
+  pacman-db-upgrade
+  yes | pacman -Scc
+  sync
+
+  return $SUCCESS
+}
 
 # setup qemu-kvm related things
 setup_qemu()
@@ -161,7 +177,7 @@ EOF
 main()
 {
   check_vm_env
-  setup_msf_env
+  #setup_msf_env
 
   return $SUCCESS
 }
