@@ -76,22 +76,30 @@ check_vm_env()
   return $SUCCESS
 }
 
-pg_cmd() {
+pg_cmd()
+{
   su - postgres -c "$*"
+
+  return $SUCCESS
 }
 
-db_exists() {
+db_exists()
+{
   if pg_cmd "psql -lqt" | cut -d \| -f 1 | grep -qw $1; then
-    return 0
+    return $SUCCESS
   fi
-  return 1
+
+  return $FAILURE
 }
 
-user_exists() {
-  if echo "SELECT usename FROM pg_user;" | pg_cmd "psql -qt postgres" | grep -qw $1; then
-    return 0
+user_exists()
+{
+  if echo "SELECT usename FROM pg_user;" | pg_cmd "psql -qt postgres" |
+    grep -qw $1; then
+      return $SUCCESS
   fi
-  return 1
+
+  return $FAILURE
 }
 
 # setup Metasploit related things
@@ -120,10 +128,12 @@ setup_msf_env()
   systemctl enable postgresql > $VERBOSE 2>&1
 
   if user_exists ${DB_USER}; then
-    printf "ALTER ROLE ${DB_USER} WITH PASSWORD '$DB_PASS';\n" | pg_cmd psql postgres > $VERBOSE 2>&1
+    printf "ALTER ROLE ${DB_USER} WITH PASSWORD '$DB_PASS';\n" |
+      pg_cmd psql postgres > $VERBOSE 2>&1
   else
     TMPFILE=$(mktemp) || (echo -e "${RED}[-]${RESET} Error: Couldn't create temp file" && exit 1)
-    printf "%s\n%s\n" "${DB_PASS}" "${DB_PASS}" | pg_cmd createuser -S -D -R -P ${DB_USER} > $VERBOSE 2>&1 > "${TMPFILE}"
+    printf "%s\n%s\n" "${DB_PASS}" "${DB_PASS}" |
+      pg_cmd createuser -S -D -R -P ${DB_USER} > $VERBOSE 2>&1 > "${TMPFILE}"
     grep -v "^Enter password for new role: $\|^Enter it again: $" "${TMPFILE}"
     rm -f "${TMPFILE}"
   fi
