@@ -188,6 +188,7 @@ main()
 {
   check_vm_env
   #setup_msf_env
+  clean_up
 
   return $SUCCESS
 }
